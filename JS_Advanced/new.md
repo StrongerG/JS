@@ -1,8 +1,9 @@
+## new 关键字的模拟实现
 要模拟一个 new 关键字的实现，大致需要：
 1. 新建一个空对象；
 2. 使其 __proto__ 指向 构造函数的 prototype 属性；
 3. 使构造函数中的 this 指向新建的对象，运行并返回该对象
-代码如下
+代码如下：
 ```js
 function objectFactory() {
   var obj = {};
