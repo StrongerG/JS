@@ -22,7 +22,7 @@ var obj = {
     console.log(this.x);
   };
 }
-obj.say();  //  11  疑问来了！！
+obj.say();  //  11  疑问来了！！  从以下总结可知，箭头函数的this是父执行上下文中继承而来，但对象字面量创建的obj是没有自身的this的，因此this按作用域会继承自再外层，也就是window中的this，因此结果是11
 ```
 继续看例三：
 ```js
