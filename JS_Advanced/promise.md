@@ -108,6 +108,194 @@ new Promise(function(resolve, reject) {
 })
 // 错误：
 ```
+实现也很简单，在执行器执行时进行try catch：
+```js
+try {
+  executor(resolve, reject)
+} catch(e) {
+  reject(e)
+}
+```
 
 #### then 的链式调用，原理：返回一个新的Promise
+then 方法修改如下：
+```js
+Promise.prototype.then = function(onFulfilled, onRejected) {
+  let _this = this
+  let promise2
+  if (_this.status === 'resolved') {
+    promise2 = new Promise(function(resolve, reject) {
+      try {   // then 回调的onFulfilled就相当于新promise成功时的执行器，整个代码也就也需要放入try catch中， 下同
+        let x = onFulfilled(_this.value)
+        resolve(x)
+      } catch(e) {
+        reject(e)
+      }
+    })
+  }
+  if (_this.status === 'rejected') {
+    promise2 = new Promise(function(resolve, reject) {
+      try {  // 看上面
+        let x = onRejected(_this.reason)
+        resolve(x)
+      } catch(e) {
+        reject(e)
+      }
+    })
+  }
+  if (_this.status === 'pending') {
+    promise2 = new Promise(function (resolve, reject) {
+      _this.onResolvedCallbacks.push(funciton() {
+        try {   //异步代码也要放入try catch块中（另加了一层try catch 与同步try catch也不冲突
+          let x = onFulfilled(_this.value)
+          resolve(x)
+        } catch(e) {
+          reject(e)
+        }
+      })
+      _this.onRejectedCallbacks.push(function() {
+        try {
+          let x = onRejected(_this.reason)
+          resolve(x)
+        } catch (e) {
+          reject(e)
+        }
+      })
+    })
+  }
+  return promise2
+}
+```
+解释：在then方法中先定义一个新的Promise，取名为promise2（官方规定的），然后在三种状态下分别用promise2包装一下，在调用onFulfilled时用一个变量x（规定的）接收返回值，try catch一下代码，没错就调resolve传入x，有错就调reject传入错误，最后再把promise2给return出去，就可以进行链式调用了。
+如：
+```js
+let p = new Promise(function(resolve, reject) {
+  resolve(date)
+})
+p.then(function(data) {
+  return data   // 源码中的x就是用来接收该值
+}, function() {
+
+}).then(function(data) {
+  console.log(data)
+}, function() {
+
+})
+```
+可以测试，链式调用确实实现了，但是别高兴的太早...还要考虑一堆奇葩的情况...
+- 前一次then返回一个普通值，字符串数组对象这些东西，都没问题，只需传给下一个then，刚才的方法就够用；
+- 前一次then返回的是一个Promise，是正常的操作，也是Promise提供的语法糖，我们要想办法判断到底返回的是啥；
+- 前一次then返回的是一个Promise，其中有异步操作，也是理所当然的，那我们就要等待他的状态改变，再进行下面的处理
+- 前一次then返回的是自己本身这个Promise
+- 调resolve的时候再传一个Promise下去，我们还得处理这个Promise；
+- 可能既调resolve又调reject，得忽略后一个
+- 光then，里面啥也不写；
+- 以及根据规范，onFulfilled和onRejected要异步执行；
+- 等等...
+上述问题，依据规范都可以顺利的解决，统一的解决方案是定义一个函数来判断和处理这一系列的情况，官方给出了一个叫做resolvePromise的函数。
+
+**先给出最终版本的 then 方法**
+```js
+Promise.prototype.then = function(onFulfilled, onRejected) {
+  // 先解决then什么都不传的问题
+  onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : function(value) {
+    return value;
+  }
+  onRejected = typeof onRejected === 'function' ? onRejected : function(err) {
+    throw err;
+  }
+
+  let _this = this;
+  let promise2;
+
+  if (_this.status === 'resolved') {
+    promise2 = new Promise(function(resolve, reject) {
+      // then回调按规范异步执行
+      setTimeout(function() {
+        try {   // then 回调的onFulfilled就相当于新promise成功时的执行器，整个代码也就也需要放入try catch中， 下同
+          let x = onFulfilled(_this.value)
+          resolvePromise(promise2, x, resolve, reject)
+        } catch(e) {
+          reject(e)
+        }
+      })
+    })
+  }
+  if (_this.status === 'rejected') {
+    promise2 = new Promise(function(resolve, reject) {
+      setTimeout(function() {
+        try {  // 看上面
+          let x = onRejected(_this.reason)
+          resolvePromise(promise2, x, resolve, reject)
+        } catch(e) {
+          reject(e)
+        }
+      })
+    })
+  }
+  if (_this.status === 'pending') {
+    promise2 = new Promise(function (resolve, reject) {
+      _this.onResolvedCallbacks.push(funciton() {
+        setTimeout(function() {
+          try {   //异步代码也要放入try catch块中（另加了一层try catch 与同步try catch也不冲突
+            let x = onFulfilled(_this.value)
+            resolvePromise(promise2, x, resolve, reject)
+          } catch(e) {
+            reject(e)
+          }
+        })
+      })
+      _this.onRejectedCallbacks.push(function() {
+        setTimeout(function() {
+          try {
+            let x = onRejected(_this.reason)
+            resolvePromise(promise2, x, resolve, reject)
+          } catch (e) {
+            reject(e)
+          }
+        })
+      })
+    })
+  }
+  return promise2;
+}
+```
+以及resolvePromise方法：
+```js
+function resolvePromise(promise2, x, resolve, reject) {
+  // 可能x是其他的promise等
+  // 以及其他的异常处理
+  if (promise2 === x) {
+    return reject(new TypeError("循环引用了"))
+  }
+  let called
+  if (x !== null && (typeof x === 'object' || typeof x === 'function')) {
+    // 返回的 x 可能是promise, 看这个对象中是否有then方法，如果有then我就认为他是promise了
+    try {
+      let then = x.then
+      if (typeof then === 'function') {
+        // 如果是 promise 
+        then.call(x, function(y) {
+          if (called) return;
+          called = true
+          // y可能还是一个promise，递归调用直到返回的是一个普通值, resolvePromise会直接resolve
+          resolvePromise(promise2, y, resolve, reject) 
+        }, function(err) {
+          if (called) return;
+          called = true
+          reject(err)
+        })
+      } else {
+        resolve(x)
+      }
+    } catch(e) {
+      if (called) return
+      called = true
+      reject(e)
+    }
+  } else {
+    resolve(x)
+  }
+}
+```
 
