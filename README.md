@@ -11,4 +11,7 @@ Javascript Learning.
 - React-in-patterns
 - 
 
+### Algorithms
+- sorts
+
 ### JS Design Pattern

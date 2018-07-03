@@ -1,8 +1,8 @@
-### Promise 的模拟实现
+## Promise 的模拟实现
 根据 Promise A+ (Promise的官方标准)实现所有 Promise 的大致功能，详细解释见注释。
 [参考文章来源](https://mp.weixin.qq.com/s/rLwO1D7Rsc0pMxfLAMkNYA)
 
-#### 实现 resolve, reject, then 以及状态机制
+### 实现 resolve, reject, then 以及状态机制
 根据 Promise 的使用可以知道，Promise 是一个需要执行器的构造函数，执行器需要resolve、reject两个方法，内部还有状态机制，then等方法位于原型链上。
 ```js
 function Promise(executor) {
@@ -56,7 +56,7 @@ p.then(function (data) {
 ```
 原因是我们在then函数中只对成功态和失败态进行了判断，而实例被new时，执行器中的代码会立即执行，但setTimeout中的代码将稍后执行，也就是说，then方法执行时，Promise的状态没有被改变依然是pending态，所以要对pending态也做判断，而由于代码可能是异步的，那么我们就要想办法把回调函数进行缓存，并且，then方法是可以多次使用的，所以要能存多个回调，选择用一个数组来缓存。
 
-#### 异步实现
+### 异步实现
 
 ```js
 // 在构造函数中注册(加上)异步的回调队列：
@@ -96,7 +96,7 @@ function reject(reason) {
 ```
 现在实现的 Promise 可以执行异步任务，也可以多次调用 then 方法，但还是需要很多其他的处理，以及 then 的链式调用还没有实现...
 
-#### 错误处理
+### 错误处理
 Promise 如果在实例中抛出错误，应该走reject，如：
 ```js
 new Promise(function(resolve, reject) {
@@ -117,7 +117,7 @@ try {
 }
 ```
 
-#### then 的链式调用，原理：返回一个新的Promise
+### then 的链式调用，原理：返回一个新的Promise
 then 方法修改如下：
 ```js
 Promise.prototype.then = function(onFulfilled, onRejected) {
@@ -299,3 +299,68 @@ function resolvePromise(promise2, x, resolve, reject) {
 }
 ```
 
+### 其余常用方法实现
+- catch 捕获错误的方法，在原型上有catch方法，返回一个没有resolve的then结果即可
+```js
+Promise.prototype.catch = function(callback) {
+  return this.then(null, callback);
+}
+```
+- Promise.all
+解析全部方法，接收一个Promise数组promises,返回新的Promise，遍历数组，都完成再resolve
+```js
+Promise.all = function(promises) {
+  return new Promise(function(resolve, reject) {
+    let arr = [];
+    let i = 0;  // 记录成功了多少次，也就是processData调用了多少次
+    function processData(index, y) {
+      arr[index] = y;
+      if (++i === promises.length) {
+        resolve(arr);
+      }
+    }
+    for (let i = 0; i < promises.length; i++) {
+      promises[i].then(function(y) {
+        processData(i, y);
+      }, reject)
+    }
+  })
+}
+```
+- Promise.race
+只要有一个promise成功了 就算成功。如果第一个失败了就失败了
+```js
+Promise.race = function(promises) {
+  return new Promise(resolve, reject) {
+    for (let i = 0; i < promises.length; i++) {
+      promises[i].then(resolve, reject);
+    }
+  }
+}
+```
+- Other
+```js
+// 生成一个成功的promise
+Promise.reject = function(value) {
+  return new Promise(resolve, reject) {
+    resolve(value);
+  }
+}
+// 生成一个失败的promise
+Promise.reject = function(reason) {
+  return new Promise(function(resolve, reject) {
+    reject(reason);
+  })
+}
+```
+### 最后
+总结一下优缺点：
+- 优点
+  1. 跟callback相比，避免的回调地域无限嵌套，可以使用链式写法
+  2. 约束了异步处理的写法
+  3. 便于错误捕捉等
+
+- 缺点
+  1. Promise一旦生成就无法取消 (一些情况下可以使用Promise.race来取消promise。比如设置异步请求在三秒不成功的话取消，可以在Promise.race的第二个参数加一个三秒的定时器)
+  2. 无法处理多次触发的事件
+  3. 无法获取当前执行的进度信息
