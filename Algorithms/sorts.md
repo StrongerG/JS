@@ -128,7 +128,7 @@ function quickSortInPlace(arr) {
       if (left <= right) {
         [arr[left], arr[right]] = [arr[right], arr[left]];
         left++;
-        right++;
+        right--;
       }
     }
     return left;
