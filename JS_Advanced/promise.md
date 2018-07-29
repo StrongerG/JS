@@ -43,11 +43,11 @@ module.exports = Promise
 当执行器的操作是异步时，如：
 ```js
 let p = new Promise(function (resolve, reject) {
-  setTimeout(function () {
+  setTimeout(function() {
     resolve(100)
   }, 1000)
 })
-p.then(function (data) {
+p.then(function(data) {
   console.log('成功', data)
 }, function (err) {
   console.log('失败', err)
