@@ -13,12 +13,12 @@
 class Listing extends React.Component {
   // ...
   render() {
-    return <div>{this.state.hello}</div>;
+    return <div>{ this.state.hello }</div>;
   }
 }
 // not arrow functions best
 function Listing({ hello }) {
-  return <div>{hello}</div>;
+  return <div>{ hello }</div>;
 }
 ```
 
@@ -219,7 +219,7 @@ render() {
 ```
 
 ### Tags
-- Always self-close tags that have no children.Always self-close tags that have no children.
+- Always self-close tags that have no children.
 - If your component has multi-line properties, close its tag on a new line. 
 
 ### Methods
