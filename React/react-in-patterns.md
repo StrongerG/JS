@@ -120,3 +120,82 @@ function TodoList({ todos, render }) {
   );
 }
 ```
+
+### Styling
+
+- clssName
+
+JSX syntax is pretty close to HTML syntax. As such we
+have almost the same tag attributes and we may still style
+using CSS classes. Classes which are defined in an
+external .css file. The only caveat is using className
+and not class . For example:
+```js
+<h1 className="title">Styling</h1>
+```
+
+- Inline styling
+
+The inline styling works just fine. Similarly to HTML we are
+free to pass styles directly via a style attribute.
+However, while in HTML the value is a string, in JSX it
+must be an object.
+```js
+const inlineStyles = {
+  color: 'red',
+  fontSize: '10px',
+  marginTop: '2em',
+  'border-top': 'solid 1px #000'
+};
+
+<h2 style={ inlineStyles }>Inline styling</h2>
+```
+
+- CSS modules
+
+That is not possible by default but with CSS modules we
+may import directly a plain CSS file and use the classes
+inside.
+
+```js
+/* style.css */
+.title {
+  color: green;
+}
+// App.jsx
+import styles from "./style.css";
+
+function App() {
+  return <h1 style={ styles.title }>Hello world</h1>;
+}
+```
+
+- Styled-components
+
+Instead of
+inlining styles the library provides a React component. We
+then use this component to represent a specific look and
+feel. For example, we may create a Link component that
+has certain styling and use that instead of the <a> tag.
+Abosolutely, <a> can be the component that we create.
+```js
+import styled from 'styled-components';
+
+const Link = styled.a`
+  text-decoration: none;
+  padding: 4px;
+  border: solid 1px #999;
+  color: black;
+`;
+
+<Link href='http://google.com'>Google</Link>
+```
+We may still use the Link component but change the text
+color like so:
+```js
+const AnotherLink = styled(Link)`
+  color: blue;
+`;
+
+<AnotherLink href='http://facebook.com'>Facebook</AnotherLink>
+```
