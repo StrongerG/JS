@@ -1,0 +1,45 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Vue</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+  <div class="container" id="app">
+    <div class="container-line">
+      <h1 class="focus-txt">{{song}}</h1>
+    </div>
+    <div class="container-line">
+      《
+      <span>{{album.name}}</span>》是
+      <span>{{singer}}</span>2005年11月发行的专辑
+    </div>
+    <div class="container-line">
+      主打歌为
+      <span>{{primeMusic}}</span>
+
+    </div>
+    <div class="container-line">
+      作词人为
+      <span>{{singer}}</span>等人。
+    </div>
+    <div class="container-line">
+      为你弹奏肖邦的
+      <span>{{album.theme}}</span>
+
+    </div>
+    <div class="container-line">
+      歌手姓名：
+      <input name="singerName" v-model="singer" />
+    </div>
+  </div>
+
+  <script src="./js/mvvm.js"></script>
+  <script src="./js/index.js"></script>
+</body>
+
+</html>
